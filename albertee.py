@@ -1,0 +1,4 @@
+from transformers import AlbertForSequenceClassification
+
+class AlbertForSequenceClassificationEarlyExit(AlbertForSequenceClassification):
+    pass
