@@ -1,14 +1,14 @@
 from albertee import AlbertForSequenceClassificationEarlyExit
+import torch
+from transformers import AlbertForSequenceClassification, AlbertTokenizer, Trainer, TrainingArguments
+from datasets import load_dataset
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import json
 
 
 def run():
-    import torch
-    from transformers import AlbertForSequenceClassification, AlbertTokenizer, Trainer, TrainingArguments
-    from datasets import load_dataset
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import os
-    import json
 
     def get_dataset(dataset_name):
         if dataset_name.lower() not in ['snli', 'multi_nli', 'sst2', 'imdb']:
@@ -115,17 +115,8 @@ def run():
 
     # Dataset name. Can be 'snli'/3, 'multi_nli'/3, 'sst2'.
     model_names_to_hidden_layers_num = {
-        # "multi_nli": {
-        #     "albert-base-v2": [1, 4],
-        #     "albert-large-v2": [1, 4],
-        #     },
-        # "snli": {
-        #     # "albert-base-v2": [16, 24],
-        #     "albert-large-v2": [28]
-        #     },
         "sst2": {
             "albert-base-v2": [16],
-            # "albert-large-v2": [1, 4, 24, 28]
         },
     }
 
