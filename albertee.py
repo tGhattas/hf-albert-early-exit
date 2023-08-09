@@ -1,6 +1,8 @@
 from transformers import AlbertForSequenceClassification, AlbertConfig, AlbertModel
-from transformers.models.albert.modeling_albert import AlbertTransformer, AlbertModel, BaseModelOutput, AlbertLayerGroup,\
-    SequenceClassifierOutput, AlbertPreTrainedModel, CrossEntropyLoss, MSELoss, BCEWithLogitsLoss, AlbertEmbeddings, BaseModelOutputWithPooling
+from transformers.models.albert.modeling_albert import AlbertTransformer, AlbertModel, BaseModelOutput, \
+    AlbertLayerGroup, \
+    SequenceClassifierOutput, AlbertPreTrainedModel, CrossEntropyLoss, MSELoss, BCEWithLogitsLoss, AlbertEmbeddings, \
+    BaseModelOutputWithPooling
 from torch import nn
 from typing import Dict, List, Optional, Tuple, Union
 import torch
@@ -14,6 +16,7 @@ class AlbertTransformerEarlyExit(nn.Module):
         self.config = config
         self.embedding_hidden_mapping_in = nn.Linear(config.embedding_size, config.hidden_size)
         self.albert_layer_groups = nn.ModuleList([AlbertLayerGroup(config) for _ in range(config.num_hidden_groups)])
+        self.early_exit = nn.Linear(config.hidden_size, 1)
 
     def forward(
             self,
@@ -53,11 +56,16 @@ class AlbertTransformerEarlyExit(nn.Module):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
+            # early exit prediction
+            predictions = self.early_exit(hidden_states)  # torch.Size([16, 128, 1])
+
+
         if not return_dict:
             return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
         return BaseModelOutput(
             last_hidden_state=hidden_states, hidden_states=all_hidden_states, attentions=all_attentions
         )
+
 
 ########################################################################################################################
 class AlbertModelEarlyExit(AlbertPreTrainedModel):
@@ -174,6 +182,7 @@ class AlbertModelEarlyExit(AlbertPreTrainedModel):
             attentions=encoder_outputs.attentions,
         )
 
+
 ########################################################################################################################
 class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
     def __init__(self, config: AlbertConfig):
@@ -260,4 +269,3 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
-
