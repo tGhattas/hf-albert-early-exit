@@ -49,9 +49,11 @@ def run():
         return encoded_dataset, num_labels, validation_set_name
 
     def model_init():
+        # model = AlbertForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
         model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_name, num_labels=num_labels)
         if hidden_layers is not None:
             model.config.num_hidden_layers = hidden_layers
+        model.config.num_exit_layers = 1 # TODO
         return model
 
     def compute_metrics(eval_pred):
