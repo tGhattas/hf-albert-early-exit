@@ -42,7 +42,7 @@ class ExitLayer(nn.Module):
         self.exit_cnt_dict = {"entropy": 0, "ori": 0}
         self.is_right = False
 
-    def forward(self, encoder_outputs, T=1, pooler=None):
+    def forward(self, encoder_outputs, pooler=None):
         sequence_output = encoder_outputs[0]
         if self.config.pooler_input == "cls":
             pool_input = sequence_output[:, 0]
@@ -244,11 +244,10 @@ class AlbertTransformerEarlyExit(nn.Module):
 
         self.cnt_sp += 1
 
-        print('-' * 50, return_dict)
         if not return_dict:
-
             return tuple(
                 v for v in [hidden_states, all_hidden_states, all_attentions, count - 1, exit_logits] if v is not None)
+
         assert exit_logits is not None
         return BaseModelOutputWithEarlyExit(
             last_hidden_state=hidden_states,
@@ -264,18 +263,15 @@ class AlbertModelEarlyExit(AlbertPreTrainedModel):
     config_class = AlbertConfig
     base_model_prefix = "albert"
 
-    def __init__(self, config: AlbertConfig, add_pooling_layer: bool = True):
+    def __init__(self, config: AlbertConfig):
         super().__init__(config)
 
         self.config = config
         self.embeddings = AlbertEmbeddings(config)
         self.encoder = AlbertTransformerEarlyExit(config)
-        if add_pooling_layer:
-            self.pooler = nn.Linear(config.hidden_size, config.hidden_size)
-            self.pooler_activation = nn.Tanh() # TODO: check if this is necessary
-        else:
-            self.pooler = None
-            self.pooler_activation = None
+        self.pooler = nn.Linear(config.hidden_size, config.hidden_size)
+        self.pooler_activation = nn.Tanh() # TODO: check if this is necessary
+
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -373,7 +369,7 @@ class AlbertModelEarlyExit(AlbertPreTrainedModel):
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
 
-        return BaseModelOutputWithPoolingEarlyExit(
+        return BaseModelOutputWithPoolingEarlyExit(  # TODO: note the pooling
             last_hidden_state=sequence_output,
             pooler_output=pooled_output,
             hidden_states=encoder_outputs.hidden_states,
@@ -390,18 +386,38 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
         self.num_labels = config.num_labels
         self.config = config
 
+        # TODO: fetch from JSON
         self.config.num_exit_layers = 1
         self.config.exit_thres = 0.1
         self.config.use_out_pooler = True
         self.config.fc_size1 = 768
         self.config.pooler_input = "cls"
+        self.config.w_init = 4.0
+        self.data_num = self.config.num_exit_layers + 1
+        self.config.weight_name = "dyn"
 
         self.albert = AlbertModelEarlyExit(config)
         self.dropout = nn.Dropout(config.classifier_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, self.config.num_labels)
 
+        self.exit_weight_lst = None
+        self.ori_weight = None
+        if self.config.weight_name == "dyn":
+            self.sigmoid = nn.Sigmoid()
+            self.W = torch.tensor([self.config.w_init for _ in range(self.config.num_exit_layers)],
+                                  device="cuda" if torch.cuda.is_available() else "cpu",
+                                  requires_grad=True)
+            self.M = self.config.num_exit_layers + 1
+
+        elif self.config.weight_name == "equal":
+            self.ori_weight = 1.
+            self.exit_weight_lst = [1.] * self.config.num_exit_layers
+
         # Initialize weights and apply final processing
         self.post_init()
+
+        self.cnt_exit = [0] * self.data_num
+        self.compute_ratio = 0
 
     def forward(
             self,
@@ -415,6 +431,7 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
+            is_eval_mode: bool = False,
     ) -> Union[SequenceClassifierOutput, Tuple]:
         """ early exit implementation """
         r"""
@@ -435,45 +452,94 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            is_eval_mode=is_eval_mode
         )
-
-        pooled_output = outputs[1]
-
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
 
         loss = None
-        if labels is not None:
-            if self.config.problem_type is None:
-                if self.num_labels == 1:
-                    self.config.problem_type = "regression"
-                elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
-                    self.config.problem_type = "single_label_classification"
-                else:
-                    self.config.problem_type = "multi_label_classification"
+        result = None
+        if not is_eval_mode:
 
-            # print(self.config.problem_type, 'problem type') TODO: remove
+            if self.config.weight_name == "dyn":
+                self.exit_weight_lst = self.sigmoid(self.W)
+                self.ori_weight = self.M - self.exit_weight_lst.sum()
 
-            if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
-                if self.num_labels == 1:
-                    loss = loss_fct(logits.squeeze(), labels.squeeze())
+            exit_logits_lst = self.albert.encoder.exit_logits_lst
+            loss_weighted = None
+            loss_all = []
+            for i, logits in enumerate(exit_logits_lst):
+                logits = logits[0]  # tuple to tensor
+                if labels is not None:
+                    # set problem type
+                    if self.config.problem_type is None:
+                        if self.num_labels == 1:
+                            self.config.problem_type = "regression"
+                        elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+                            self.config.problem_type = "single_label_classification"
+                        else:
+                            self.config.problem_type = "multi_label_classification"
+
+                    # print(self.config.problem_type, 'problem type') TODO: remove
+                    if self.config.problem_type == "regression":
+                        loss_fct = MSELoss()
+                        if self.num_labels == 1:
+                            loss = loss_fct(logits.squeeze(), labels.squeeze())
+                        else:
+                            loss = loss_fct(logits, labels)
+
+                    elif self.config.problem_type == "single_label_classification":
+                        loss_fct = CrossEntropyLoss()
+                        loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+                    elif self.config.problem_type == "multi_label_classification":
+                        loss_fct = BCEWithLogitsLoss()
+                        loss = loss_fct(logits, labels)
+
+                loss_all.append(loss.item())  # save loss
+                if loss_weighted is None:
+                    loss_weighted = loss * self.exit_weight_lst[i]
                 else:
+                    if i < len(self.exit_weight_lst):
+                        loss_weighted += loss * self.exit_weight_lst[i]
+                    else:  # weight of the last layer
+                        loss_weighted += loss * self.ori_weight
+
+            if not return_dict:
+                output = (logits,) + outputs[2:]
+                result = ((loss_weighted,) + output) if loss is not None else output
+            else:
+                result = SequenceClassifierOutput(
+                    loss=loss_weighted,
+                    logits=logits,
+                    hidden_states=outputs.hidden_states,
+                    attentions=outputs.attentions,
+                )
+        else:
+            # eval mode
+            exit_idx = outputs[1]
+            self.cnt_exit[exit_idx] += 1
+            logits = outputs[2][0]
+            if labels is not None:
+                if self.config.problem_type == "regression":
+                    # We are doing regression
+                    loss_fct = MSELoss()
+                    if self.num_labels == 1:
+                        loss = loss_fct(logits.squeeze(), labels.squeeze())
+                    else:
+                        loss = loss_fct(logits, labels)
+                elif self.config.problem_type == "single_label_classification":
+                    loss_fct = CrossEntropyLoss()
+                    loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                else: # multi_label_classification
+                    loss_fct = BCEWithLogitsLoss()
                     loss = loss_fct(logits, labels)
-            elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-            elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
-                loss = loss_fct(logits, labels)
+                if not return_dict:
+                    result = (loss, logits) + outputs
+                else:
+                    result = SequenceClassifierOutput(
+                        loss=loss,
+                        logits=logits,
+                        hidden_states=outputs.hidden_states,
+                        attentions=outputs.attentions,
+                    )
 
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
-
-        return SequenceClassifierOutput(
-            loss=loss,
-            logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        return result
