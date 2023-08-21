@@ -37,7 +37,7 @@ def run():
             num_labels = 3
         elif dataset_name.lower() == 'sst2':
             print('-' * 100, 'size of train set: ', len(dataset['train']))
-            dataset['train'] = dataset['train'].select(range(len(dataset['train']) // 400))
+            dataset['train'] = dataset['train'].select(range(len(dataset['train'])))
             def encode(examples):
                 return tokenizer(examples['sentence'], truncation=True, padding='max_length', max_length=128)
 
