@@ -137,13 +137,17 @@ def run():
 
                     # define early exit config
                     early_exit_config = {
-                        "num_exit_layers": 1,
+                        "exit_layers_depth": 1,
                         "exit_thres": exit_th,
                         "use_out_pooler": True,
                         "fc_size1": 768,
                         "pooler_input": "cls",
                         "w_init": 4.0,
-                        "weight_name": "dyn"
+                        "weight_name": "dyn",
+                        "thres_name": "bias_1",
+                        "cnt_thres": 8,
+                        "margin": 0.0,
+                        "exits": 11,
                     }
                     if hidden_layers is not None:
                         early_exit_config['num_hidden_layers'] = hidden_layers

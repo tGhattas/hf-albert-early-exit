@@ -83,9 +83,6 @@ class ExitLayer(nn.Module):
 
         return outputs  # (logits,)
 
-    def label_smoothing(self, x):
-        e = self.config.e_label_smoothing
-        return ((1 - e) * x) + (e / x.shape[-1])
 
     def lower_than_thres(self, x=None):
         if self.config.thres_name == "entropy":
@@ -171,10 +168,10 @@ class AlbertTransformerEarlyExit(nn.Module):
         self.embedding_hidden_mapping_in = nn.Linear(config.embedding_size, config.hidden_size)
         self.albert_layer_groups = nn.ModuleList([AlbertLayerGroup(config) for _ in range(config.num_hidden_groups)])
 
-        if config.num_exit_layers == 1:
+        if config.exit_layers_depth == 1:
             self.exit_out_layer = ExitLayer(config)
         else:
-            self.exit_out_layers = nn.ModuleList([ExitLayer(config) for _ in range(config.num_exit_layers)])
+            self.exit_out_layers = nn.ModuleList([ExitLayer(config) for _ in range(config.exit_layers_depth)])
 
         self.exit_logits_lst = []
         self.cnt_sp = 0
@@ -224,11 +221,11 @@ class AlbertTransformerEarlyExit(nn.Module):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            if self.config.num_exit_layers == 1:
+            if self.config.exit_layers_depth == 1:
                 exit_out_layer = self.exit_out_layer
             else:
                 layer_idx = count // (self.config.num_hidden_layers //
-                                      self.config.num_exit_layers)
+                                      self.config.exit_layers_depth)
                 exit_out_layer = self.exit_out_layers[layer_idx]
 
             # logits before softmax
@@ -381,19 +378,27 @@ class AlbertModelEarlyExit(AlbertPreTrainedModel):
 
 ########################################################################################################################
 class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
-    def __init__(self, config: AlbertConfig, num_exit_layers: int, exit_thres: float, use_out_pooler: bool, fc_size1: int, pooler_input: str, w_init: float, weight_name: str):
+    def __init__(self, config: AlbertConfig, exit_layers_depth: int, exit_thres: float, use_out_pooler: bool,
+                 fc_size1: int, pooler_input: str, w_init: float, weight_name: str, exits: int, margin: float,
+                 thres_name: str, cnt_thres: int):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.config = config
 
-        self.config.num_exit_layers = num_exit_layers
+        self.config.exit_layers_depth = exit_layers_depth
+        self.config.exits = exits
         self.config.exit_thres = exit_thres
         self.config.use_out_pooler = use_out_pooler
         self.config.fc_size1 = fc_size1
         self.config.pooler_input = pooler_input
         self.config.w_init = w_init
         self.config.weight_name = weight_name
-        self.data_num = self.config.num_exit_layers + 1
+        self.config.margin = margin
+        self.config.thres_name = thres_name
+        self.config.cnt_thres = cnt_thres
+
+        self.data_num = self.config.exits + 1
+
         self.config.is_eval_mode = False # default
 
         self.albert = AlbertModelEarlyExit(config)
@@ -404,14 +409,14 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
         self.ori_weight = None
         if self.config.weight_name == "dyn":
             self.sigmoid = nn.Sigmoid()
-            self.W = torch.tensor([self.config.w_init for _ in range(self.config.num_exit_layers)],
+            self.W = torch.tensor([self.config.w_init for _ in range(self.config.exits)],
                                   device="cuda" if torch.cuda.is_available() else "cpu",
                                   requires_grad=True)
-            self.M = self.config.num_exit_layers + 1
+            self.M = self.config.exits + 1
 
         elif self.config.weight_name == "equal":
             self.ori_weight = 1.
-            self.exit_weight_lst = [1.] * self.config.num_exit_layers
+            self.exit_weight_lst = [1.] * self.config.exits
 
         # Initialize weights and apply final processing
         self.post_init()
