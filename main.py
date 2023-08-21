@@ -133,7 +133,7 @@ def run():
                     tokenizer = AlbertTokenizer.from_pretrained(model_name)
                     dataset, num_labels, validation_set_name = get_dataset(dataset_name)
 
-                    save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{dataset_name}"
+                    save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_thesholds}"
 
                     # define early exit config
                     early_exit_config = {
