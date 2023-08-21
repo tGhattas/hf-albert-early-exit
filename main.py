@@ -180,7 +180,7 @@ def run():
                         plot_loss(save_directory)
 
                     # Evaluate the model
-                    model.set_eval_mode(True)
+                    trainer.model.set_eval_mode(True)
                     eval_results = trainer.evaluate()
 
                     # Save evaluation results
