@@ -394,6 +394,7 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
         self.config.w_init = w_init
         self.config.weight_name = weight_name
         self.data_num = self.config.num_exit_layers + 1
+        self.config.is_eval_mode = False # default
 
         self.albert = AlbertModelEarlyExit(config)
         self.dropout = nn.Dropout(config.classifier_dropout_prob)
@@ -418,6 +419,11 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
         self.cnt_exit = [0] * self.data_num
         self.compute_ratio = 0
 
+    def set_eval_mode(self, is_eval_mode: bool):
+        """ inorder to change code of the original model as little as possible, I use this function to set eval
+        mode and run trainer.evaluate() """
+        self.config.is_eval_mode = is_eval_mode
+
     def forward(
             self,
             input_ids: Optional[torch.LongTensor] = None,
@@ -440,7 +446,7 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
                     `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
                 """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        is_eval_mode = self.config.is_eval_mode or is_eval_mode
         outputs = self.albert(
             input_ids=input_ids,
             attention_mask=attention_mask,

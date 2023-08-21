@@ -81,7 +81,7 @@ def run():
         tokenizer.save_pretrained(training_args.output_dir)
 
     def load_model_and_evaluate(model_dir, dataset, validation_set_name):
-        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_dir)
+        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_dir, **early_exit_config)
         tokenizer = AlbertTokenizer.from_pretrained(model_dir)
 
         # Print the model's configuration
@@ -104,6 +104,7 @@ def run():
         )
 
         # Evaluate the model
+        model.set_eval_mode(True)
         eval_results = trainer.evaluate()
 
         return model, tokenizer, eval_results
@@ -179,13 +180,14 @@ def run():
                         plot_loss(save_directory)
 
                     # Evaluate the model
+                    model.set_eval_mode(True)
                     eval_results = trainer.evaluate()
 
                     # Save evaluation results
                     save_eval_results(eval_results, save_directory)
 
                     # To load a saved model
-                    # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
+                    model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
 
                     buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_thesholds}\\n' + str(eval_results) + '\\n']
                     print(buffer)
