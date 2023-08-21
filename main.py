@@ -1,6 +1,7 @@
 from albertee import AlbertForSequenceClassificationEarlyExit
 import torch
-from transformers import AlbertForSequenceClassification, AlbertTokenizer, Trainer, TrainingArguments
+from typing import Union
+from transformers import AlbertForSequenceClassification, AlbertTokenizer, Trainer, TrainingArguments, AlbertConfig
 from datasets import load_dataset
 import numpy as np
 import matplotlib.pyplot as plt
@@ -49,11 +50,9 @@ def run():
         return encoded_dataset, num_labels, validation_set_name
 
     def model_init():
-        # model = AlbertForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
-        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_name, num_labels=num_labels)
-        if hidden_layers is not None:
-            model.config.num_hidden_layers = hidden_layers
-        model.config.num_exit_layers = 1 # TODO
+        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_name,
+                                                                         num_labels=num_labels,
+                                                                         **early_exit_config)
         return model
 
     def compute_metrics(eval_pred):
@@ -118,64 +117,78 @@ def run():
     # Dataset name. Can be 'snli'/3, 'multi_nli'/3, 'sst2'.
     model_names_to_hidden_layers_num = {
         "sst2": {
-            "albert-base-v2": [16],
+            "albert-base-v2": [None],
         },
     }
-
+    exit_thesholds = [0.8, 0.6, 0.4, 0.2, 0.0]
     buffer = []
 
     # run on combinations
-    for dataset_name in model_names_to_hidden_layers_num:
-        for model_name in model_names_to_hidden_layers_num[dataset_name]:
-            for hidden_layers in model_names_to_hidden_layers_num[dataset_name][model_name]:
+    for exit_th in exit_thesholds:
+        for dataset_name in model_names_to_hidden_layers_num:
+            for model_name in model_names_to_hidden_layers_num[dataset_name]:
+                for hidden_layers in model_names_to_hidden_layers_num[dataset_name][model_name]:
 
-                tokenizer = AlbertTokenizer.from_pretrained(model_name)
-                dataset, num_labels, validation_set_name = get_dataset(dataset_name)
+                    tokenizer = AlbertTokenizer.from_pretrained(model_name)
+                    dataset, num_labels, validation_set_name = get_dataset(dataset_name)
 
-                save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{dataset_name}"
+                    save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{dataset_name}"
 
-                training_args = TrainingArguments(
-                    output_dir=save_directory,
-                    num_train_epochs=2,
-                    per_device_train_batch_size=16 if dataset_name != "multi_nli" else 8,
-                    per_device_eval_batch_size=64,
-                    warmup_steps=500,
-                    weight_decay=0.01,
-                    logging_dir=f'{save_directory}/logs',
-                    save_strategy='steps',  # Save checkpoint every 10000 steps
-                    save_steps=100000,
-                    learning_rate=2e-5,  # previously 2e-5
-                )
+                    # define early exit config
+                    early_exit_config = {
+                        "num_exit_layers": 1,
+                        "exit_thres": exit_th,
+                        "use_out_pooler": True,
+                        "fc_size1": 768,
+                        "pooler_input": "cls",
+                        "w_init": 4.0,
+                        "weight_name": "dyn"
+                    }
+                    if hidden_layers is not None:
+                        early_exit_config['num_hidden_layers'] = hidden_layers
 
-                trainer = Trainer(
-                    model_init=model_init,
-                    args=training_args,
-                    train_dataset=dataset['train'],
-                    eval_dataset=dataset[validation_set_name],
-                    compute_metrics=compute_metrics,
-                )
+                    training_args = TrainingArguments(
+                        output_dir=save_directory,
+                        num_train_epochs=2,
+                        per_device_train_batch_size=16 if dataset_name != "multi_nli" else 8,
+                        per_device_eval_batch_size=64,
+                        warmup_steps=500,
+                        weight_decay=0.01,
+                        logging_dir=f'{save_directory}/logs',
+                        save_strategy='steps',  # Save checkpoint every 10000 steps
+                        save_steps=100000,
+                        learning_rate=2e-5,  # previously 2e-5
+                    )
 
-                # Train the model
-                trainer.train(resume_from_checkpoint=False)
+                    trainer = Trainer(
+                        model_init=model_init,
+                        args=training_args,
+                        train_dataset=dataset['train'],
+                        eval_dataset=dataset[validation_set_name],
+                        compute_metrics=compute_metrics,
+                    )
 
-                # Save the model
-                save_model(trainer.model, training_args)
+                    # Train the model
+                    trainer.train(resume_from_checkpoint=False)
 
-                # Plot the training loss if possible
-                if os.path.isfile(f"{save_directory}/trainer_state.json"):
-                    plot_loss(save_directory)
+                    # Save the model
+                    save_model(trainer.model, training_args)
 
-                # Evaluate the model
-                eval_results = trainer.evaluate()
+                    # Plot the training loss if possible
+                    if os.path.isfile(f"{save_directory}/trainer_state.json"):
+                        plot_loss(save_directory)
 
-                # Save evaluation results
-                save_eval_results(eval_results, save_directory)
+                    # Evaluate the model
+                    eval_results = trainer.evaluate()
 
-                # To load a saved model
-                # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
+                    # Save evaluation results
+                    save_eval_results(eval_results, save_directory)
 
-                buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}\\n' + str(eval_results) + '\\n']
-                print(buffer)
+                    # To load a saved model
+                    # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
+
+                    buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_thesholds}\\n' + str(eval_results) + '\\n']
+                    print(buffer)
 
 
 if __name__ == '__main__':

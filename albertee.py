@@ -110,7 +110,7 @@ class ExitLayer(nn.Module):
                 return False
             cnt_large = 0
             cnt_less = 0
-            # input(x[-cnt_bias:])
+
             for i in range(cnt_bias, 0, -1):
                 if x[-i] < 0.5 - margin:
                     cnt_less += 1
@@ -381,20 +381,19 @@ class AlbertModelEarlyExit(AlbertPreTrainedModel):
 
 ########################################################################################################################
 class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
-    def __init__(self, config: AlbertConfig):
+    def __init__(self, config: AlbertConfig, num_exit_layers: int, exit_thres: float, use_out_pooler: bool, fc_size1: int, pooler_input: str, w_init: float, weight_name: str):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.config = config
 
-        # TODO: fetch from JSON
-        self.config.num_exit_layers = 1
-        self.config.exit_thres = 0.1
-        self.config.use_out_pooler = True
-        self.config.fc_size1 = 768
-        self.config.pooler_input = "cls"
-        self.config.w_init = 4.0
+        self.config.num_exit_layers = num_exit_layers
+        self.config.exit_thres = exit_thres
+        self.config.use_out_pooler = use_out_pooler
+        self.config.fc_size1 = fc_size1
+        self.config.pooler_input = pooler_input
+        self.config.w_init = w_init
+        self.config.weight_name = weight_name
         self.data_num = self.config.num_exit_layers + 1
-        self.config.weight_name = "dyn"
 
         self.albert = AlbertModelEarlyExit(config)
         self.dropout = nn.Dropout(config.classifier_dropout_prob)
