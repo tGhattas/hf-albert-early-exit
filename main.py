@@ -82,7 +82,7 @@ def run():
         tokenizer.save_pretrained(training_args.output_dir)
 
     def load_model_and_evaluate(model_dir, dataset, validation_set_name):
-        model = AlbertForSequenceClassification.from_pretrained(model_dir)
+        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_dir)
         tokenizer = AlbertTokenizer.from_pretrained(model_dir)
 
         # Print the model's configuration
