@@ -525,9 +525,9 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
                 )
         else:
             # eval mode
-            exit_idx = outputs[1]
+            exit_idx = outputs[-2]
             self.cnt_exit[exit_idx] += 1
-            logits = outputs[2][0]
+            logits = outputs[-1][0]
             if labels is not None:
                 if self.config.problem_type == "regression":
                     # We are doing regression

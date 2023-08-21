@@ -26,6 +26,7 @@ def run():
 
         if dataset_name.lower() in ['snli', 'multi_nli']:
             dataset['train'] = dataset['train'].select(range(len(dataset['train']) // 3))
+
             dataset['train'] = dataset['train'].filter(lambda example: example['label'] >= 0)
             dataset[validation_set_name] = dataset[validation_set_name].filter(lambda example: example['label'] >= 0)
 
@@ -35,6 +36,8 @@ def run():
 
             num_labels = 3
         elif dataset_name.lower() == 'sst2':
+            print('-' * 100, 'size of train set: ', len(dataset['train']))
+            dataset['train'] = dataset['train'].select(range(len(dataset['train']) // 400))
             def encode(examples):
                 return tokenizer(examples['sentence'], truncation=True, padding='max_length', max_length=128)
 
@@ -81,7 +84,8 @@ def run():
         tokenizer.save_pretrained(training_args.output_dir)
 
     def load_model_and_evaluate(model_dir, dataset, validation_set_name):
-        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_dir, **early_exit_config)
+        #TODO fix
+        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_dir, num_labels=num_labels, **early_exit_config)
         tokenizer = AlbertTokenizer.from_pretrained(model_dir)
 
         # Print the model's configuration
@@ -155,7 +159,7 @@ def run():
                     training_args = TrainingArguments(
                         output_dir=save_directory,
                         num_train_epochs=2,
-                        per_device_train_batch_size=16 if dataset_name != "multi_nli" else 8,
+                        per_device_train_batch_size=32 if dataset_name != "multi_nli" else 8,
                         per_device_eval_batch_size=64,
                         warmup_steps=500,
                         weight_decay=0.01,
@@ -179,9 +183,6 @@ def run():
                     # Save the model
                     save_model(trainer.model, training_args)
 
-                    # Plot the training loss if possible
-                    if os.path.isfile(f"{save_directory}/trainer_state.json"):
-                        plot_loss(save_directory)
 
                     # Evaluate the model
                     trainer.model.set_eval_mode(True)
@@ -191,7 +192,7 @@ def run():
                     save_eval_results(eval_results, save_directory)
 
                     # To load a saved model
-                    model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
+                    # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
 
                     buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_thesholds}\\n' + str(eval_results) + '\\n']
                     print(buffer)
