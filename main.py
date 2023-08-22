@@ -9,8 +9,7 @@ import os
 import json
 
 
-def run():
-
+def run(minize_dataset: bool = False):
     def get_dataset(dataset_name):
         if dataset_name.lower() not in ['snli', 'multi_nli', 'sst2', 'imdb']:
             raise ValueError(
@@ -36,8 +35,6 @@ def run():
 
             num_labels = 3
         elif dataset_name.lower() == 'sst2':
-            print('-' * 100, 'size of train set: ', len(dataset['train']))
-            dataset['train'] = dataset['train'].select(range(len(dataset['train'])))
             def encode(examples):
                 return tokenizer(examples['sentence'], truncation=True, padding='max_length', max_length=128)
 
@@ -47,7 +44,9 @@ def run():
                 return tokenizer(examples['text'], truncation=True, padding='max_length', max_length=128)
 
             num_labels = 2
-
+        if minize_dataset:
+            dataset['train'] = dataset['train'].select(range(100))
+            dataset[validation_set_name] = dataset[validation_set_name].select(range(100))
         encoded_dataset = dataset.map(encode, batched=True)
 
         return encoded_dataset, num_labels, validation_set_name
@@ -84,8 +83,9 @@ def run():
         tokenizer.save_pretrained(training_args.output_dir)
 
     def load_model_and_evaluate(model_dir, dataset, validation_set_name):
-        #TODO fix
-        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_dir, num_labels=num_labels, **early_exit_config)
+        # TODO fix
+        model = AlbertForSequenceClassificationEarlyExit.from_pretrained(model_dir, num_labels=num_labels,
+                                                                         **early_exit_config)
         tokenizer = AlbertTokenizer.from_pretrained(model_dir)
 
         # Print the model's configuration
@@ -121,7 +121,10 @@ def run():
 
     # Dataset name. Can be 'snli'/3, 'multi_nli'/3, 'sst2'.
     model_names_to_hidden_layers_num = {
-        "sst2": {
+        # "sst2": {
+        #     "albert-base-v2": [None],
+        # },
+        "snli": {
             "albert-base-v2": [None],
         },
     }
@@ -183,7 +186,6 @@ def run():
                     # Save the model
                     save_model(trainer.model, training_args)
 
-
                     # Evaluate the model
                     trainer.model.set_eval_mode(True)
                     eval_results = trainer.evaluate()
@@ -194,9 +196,10 @@ def run():
                     # To load a saved model
                     # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
 
-                    buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_thesholds}\\n' + str(eval_results) + '\\n']
+                    buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_th}\\n' + str(
+                        eval_results) + '\\n']
                     print(buffer)
 
 
 if __name__ == '__main__':
-    run()
+    run(minize_dataset=True)

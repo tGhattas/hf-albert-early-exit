@@ -83,7 +83,6 @@ class ExitLayer(nn.Module):
 
         return outputs  # (logits,)
 
-
     def lower_than_thres(self, x=None):
         if self.config.thres_name == "entropy":
             # normalized entropy
@@ -94,7 +93,6 @@ class ExitLayer(nn.Module):
                 self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
                 return False
         elif self.config.thres_name == "logits":
-            # logits on both sides?
             return self.softm_logits.min() < self.exit_thres
         elif self.config.thres_name == "bias_1":
             if self.entropy.mean() < self.exit_thres:
@@ -120,6 +118,60 @@ class ExitLayer(nn.Module):
             else:
                 self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
                 return False
+        elif self.config.thres_name == "bias_2":
+            if self.entropy.mean() < self.exit_thres:
+                self.exit_cnt_dict["entropy"] = self.exit_cnt_dict["entropy"] + 1
+                return True
+            cnt_bias = int(self.config.cnt_thres)
+            margin = self.config.margin
+            if len(x) < cnt_bias:
+                self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
+                return False
+            if x[-cnt_bias] < 0.5 - margin:
+                is_larger = False
+            elif x[-cnt_bias] > 0.5 + margin:
+                is_larger = True
+            else:
+                self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
+                return False
+
+            logit = x[-cnt_bias]
+            for i in range(cnt_bias - 1, 0, -1):
+                if is_larger and x[-i] < logit:
+                    self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
+                    return False
+                if not is_larger and x[-i] > logit:
+                    self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
+                    return False
+                logit = x[-i]
+            self.exit_cnt_dict["bias_2"] = self.exit_cnt_dict.get(
+                "bias_2", 0) + 1
+            return True
+        elif self.config.thres_name == "bias_3":
+            if self.entropy.mean() < self.exit_thres:
+                self.exit_cnt_dict["entropy"] = self.exit_cnt_dict["entropy"] + 1
+                return True
+            cnt_bias = int(self.config.cnt_thres)
+            margin = self.config.margin
+            if len(x) < cnt_bias:
+                self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
+                return False
+            max_tmp = max(x[-cnt_bias:])
+            min_tmp = min(x[-cnt_bias:])
+
+            if min_tmp > 0.5 + margin or max_tmp < 0.5 - margin:
+                pass
+            else:
+                self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
+                return False
+            if (max_tmp - min_tmp) <= self.config.range_tmp:
+                self.exit_cnt_dict["bias_3"] = self.exit_cnt_dict.get(
+                    "bias_3", 0) + 1
+                return True
+            else:
+                self.exit_cnt_dict["ori"] = self.exit_cnt_dict["ori"] + 1
+                return False
+
 
 
 @dataclass
