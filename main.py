@@ -112,9 +112,9 @@ def run(minize_dataset: bool = False) -> dict:
         "snli": {
             "albert-base-v2": [None],
         },
-        # "multi_nli": {
-        #     "albert-base-v2": [None],
-        # },
+        "multi_nli": {
+            "albert-base-v2": [None],
+        },
     }
     exit_thesholds = [0.8, 0.6, 0.4, 0.2, 0.0]
     buffer = {}
