@@ -10,7 +10,7 @@ import numpy as np
 import json
 
 
-def run(minize_dataset: bool = False, dataset_to_run: Optional[str] = None, batch_size: int = 32) -> dict:
+def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> dict:
     def get_number_of_hidden_layers(model: Union[str, AlbertForSequenceClassificationEarlyExit]) -> int:
         if isinstance(model, str):
             model = AlbertForSequenceClassification.from_pretrained(model)
@@ -190,5 +190,5 @@ def fill_in_dataframes(data: dict[str, dict]) -> dict[str, pd.DataFrame]:
 
 if __name__ == '__main__':
     # minize dataset for quick end to end check
-    results = run(minize_dataset=True)
+    results = run(batch_size=32, minize_dataset=True)
     print(fill_in_dataframes(results)['sst2'])
