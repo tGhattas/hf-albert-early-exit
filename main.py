@@ -109,16 +109,16 @@ def run(minize_dataset: bool = False) -> dict:
     # Dataset name. Can be 'snli'/3, 'multi_nli'/3, 'sst2'.
     model_names_to_hidden_layers_num = {
         "sst2": {
-            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1]],#, 1.5, 2]],
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
         },
-        # "snli": {
-        #     "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
-        # },
-        # "multi_nli": {
-        #     "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
-        # },
+        "snli": {
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+        },
+        "multi_nli": {
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+        },
     }
-    exit_thesholds = [0.8, 0.6]#, 0.4, 0.2, 0.0]
+    exit_thesholds = [0.8, 0.6, 0.4, 0.2, 0.0]
     buffer = {}
 
     # run on combinations
