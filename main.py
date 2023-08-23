@@ -121,10 +121,13 @@ def run(minize_dataset: bool = False):
 
     # Dataset name. Can be 'snli'/3, 'multi_nli'/3, 'sst2'.
     model_names_to_hidden_layers_num = {
-        # "sst2": {
-        #     "albert-base-v2": [None],
-        # },
+        "sst2": {
+            "albert-base-v2": [None],
+        },
         "snli": {
+            "albert-base-v2": [None],
+        },
+        "multi_nli": {
             "albert-base-v2": [None],
         },
     }
@@ -202,4 +205,5 @@ def run(minize_dataset: bool = False):
 
 
 if __name__ == '__main__':
+    # minize dataset for quick end to end check
     run(minize_dataset=True)
