@@ -108,7 +108,7 @@ def run(minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> d
 
                         save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{weight_name}_{dataset_name}_exit_th_{exit_th}"
 
-                        thres_name = "bias_1" if exit_th > 0.0 else "entropy"
+                        thres_name = "entropy"  # "bias_1" if exit_th > 0.0 else "entropy"
                         # define early exit config
                         early_exit_config = {
                             "exit_layers_depth": 1,
