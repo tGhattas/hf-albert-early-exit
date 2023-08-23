@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from albertee import AlbertForSequenceClassificationEarlyExit
 import torch
 from typing import Union
@@ -9,7 +11,7 @@ import os
 import json
 
 
-def run(minize_dataset: bool = False):
+def run(minize_dataset: bool = False) -> dict:
     def get_dataset(dataset_name):
         if dataset_name.lower() not in ['snli', 'multi_nli', 'sst2', 'imdb']:
             raise ValueError(
@@ -63,20 +65,7 @@ def run(minize_dataset: bool = False):
         accuracy = np.mean(predictions == labels)
         return {'accuracy': accuracy}
 
-    def plot_loss(model_dir):
-        try:
-            logs = []
-            with open(f"{model_dir}/trainer_state.json", 'r') as f:
-                for line in f:
-                    logs.append(json.loads(line))
 
-            losses = [log['loss'] for log in logs]
-            plt.plot(losses)
-            plt.xlabel('Step')
-            plt.ylabel('Loss')
-            plt.show()
-        except FileNotFoundError:
-            print(f"No trainer_state.json found in {model_dir}. Cannot plot the loss.")
 
     def save_model(model, training_args):
         model.save_pretrained(training_args.output_dir)
@@ -90,10 +79,6 @@ def run(minize_dataset: bool = False):
 
         # Print the model's configuration
         print(model.config)
-
-        # Plot the training loss if possible
-        if os.path.isfile(f"{model_dir}/trainer_state.json"):
-            plot_loss(model_dir)
 
         # Create a new trainer with the loaded model and tokenizer
         dataset['train'] = dataset['train'].filter(lambda example: example['label'] >= 0)
@@ -127,12 +112,12 @@ def run(minize_dataset: bool = False):
         "snli": {
             "albert-base-v2": [None],
         },
-        "multi_nli": {
-            "albert-base-v2": [None],
-        },
+        # "multi_nli": {
+        #     "albert-base-v2": [None],
+        # },
     }
     exit_thesholds = [0.8, 0.6, 0.4, 0.2, 0.0]
-    buffer = []
+    buffer = {}
 
     # run on combinations
     for exit_th in exit_thesholds:
@@ -199,9 +184,10 @@ def run(minize_dataset: bool = False):
                     # To load a saved model
                     # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
 
-                    buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_th}\n' + str(
-                        eval_results) + '\n']
-                    print(buffer)
+                    buffer[f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_th}\n'] = eval_results
+                pprint(buffer)
+                return buffer
+
 
 
 if __name__ == '__main__':
