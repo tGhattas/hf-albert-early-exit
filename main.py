@@ -122,10 +122,11 @@ def run(minize_dataset: bool = False) -> dict:
     buffer = {}
 
     # run on combinations
-    for exit_th in exit_thesholds:
-        for dataset_name in model_names_to_hidden_layers_num:
-            for model_name in model_names_to_hidden_layers_num[dataset_name]:
-                for hidden_layers in model_names_to_hidden_layers_num[dataset_name][model_name]:
+
+    for dataset_name in model_names_to_hidden_layers_num:
+        for model_name in model_names_to_hidden_layers_num[dataset_name]:
+            for hidden_layers in model_names_to_hidden_layers_num[dataset_name][model_name]:
+                for exit_th in exit_thesholds:
 
                     tokenizer = AlbertTokenizer.from_pretrained(model_name)
                     dataset, num_labels, validation_set_name = get_dataset(dataset_name)
