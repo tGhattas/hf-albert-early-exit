@@ -184,9 +184,9 @@ def run(minize_dataset: bool = False) -> dict:
                     # To load a saved model
                     # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
 
-                    buffer[f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_th}\n'] = eval_results
-                pprint(buffer)
-                return buffer
+                    buffer[f'{"default" if hidden_layers is None else hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_th}'] = eval_results
+                    pprint(buffer)
+    return buffer
 
 
 
