@@ -85,14 +85,14 @@ def run(minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> d
         "sst2": {
             "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
         },
-        # "snli": {
-        #     "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
-        # },
-        # "multi_nli": {
-        #     "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
-        # },
+        "snli": {
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+        },
+        "multi_nli": {
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+        },
     }
-    exit_thesholds = [0.4, 0.2, 0.0]
+    exit_thesholds = [0.6, 0.4, 0.2, 0.0]
     buffer = {}
 
     datasets_to_run = [dataset_to_run] if dataset_to_run is not None else model_names_to_hidden_layers_num.keys()
@@ -129,7 +129,7 @@ def run(minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> d
                         training_args = TrainingArguments(
                             output_dir=save_directory,
                             num_train_epochs=2,
-                            per_device_train_batch_size=32 if dataset_name != "multi_nli" else 8,
+                            per_device_train_batch_size=64 if dataset_name != "multi_nli" else 8,
                             per_device_eval_batch_size=64,
                             warmup_steps=500,
                             weight_decay=0.01,
