@@ -3,14 +3,14 @@ from pprint import pprint
 import pandas as pd
 
 from albertee import AlbertForSequenceClassificationEarlyExit
-from typing import Union
+from typing import Union, Optional
 from transformers import AlbertForSequenceClassification, AlbertTokenizer, Trainer, TrainingArguments
 from datasets import load_dataset
 import numpy as np
 import json
 
 
-def run(minize_dataset: bool = False) -> dict:
+def run(minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> dict:
     def get_number_of_hidden_layers(model: Union[str, AlbertForSequenceClassificationEarlyExit]) -> int:
         if isinstance(model, str):
             model = AlbertForSequenceClassification.from_pretrained(model)
@@ -95,6 +95,7 @@ def run(minize_dataset: bool = False) -> dict:
     exit_thesholds = [0.4, 0.2, 0.0]
     buffer = {}
 
+    datasets_to_run = [dataset_to_run] if dataset_to_run is not None else model_names_to_hidden_layers_num.keys()
     # run on combinations
     for weight_name in ['equal', 'dyn']:
         for dataset_name in model_names_to_hidden_layers_num:
