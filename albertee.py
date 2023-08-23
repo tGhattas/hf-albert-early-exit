@@ -42,9 +42,9 @@ class BaseModelOutputWithEarlyExit(ModelOutput):
                 Attentions weights after the attention softmax, used to compute the weighted average in the self-attention
                 heads.
 
-            exits_idx the index of the exit layer
+            exits_idx (`int`): the index of the exit layer
 
-            exits_logits the logits of the exit layer
+            exits_logits (`torch.FloatTensor`): the logits of the exit layer
         """
 
     last_hidden_state: torch.FloatTensor = None
@@ -81,7 +81,6 @@ class ExitLayer(nn.Module):
         # exit
         # ori: original exit, entropy: exit by entropy
         self.exit_cnt_dict = {"entropy": 0, "ori": 0}
-        self.is_right = False
 
     def forward(self, encoder_outputs, pooler=None):
         sequence_output = encoder_outputs[0]
