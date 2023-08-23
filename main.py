@@ -83,7 +83,7 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
     # Dataset name. Can be 'snli'/3, 'multi_nli'/3, 'sst2'.
     model_names_to_hidden_layers_num = {
         "sst2": {
-            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1.5, 2]],
         },
         "snli": {
             "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
