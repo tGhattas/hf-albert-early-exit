@@ -319,7 +319,7 @@ class AlbertModelEarlyExit(AlbertPreTrainedModel):
         self.embeddings = AlbertEmbeddings(config)
         self.encoder = AlbertTransformerEarlyExit(config)
         self.pooler = nn.Linear(config.hidden_size, config.hidden_size)
-        self.pooler_activation = nn.Tanh() # TODO: check if this is necessary
+        self.pooler_activation = nn.Tanh()
 
 
         # Initialize weights and apply final processing
@@ -418,7 +418,7 @@ class AlbertModelEarlyExit(AlbertPreTrainedModel):
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
 
-        return BaseModelOutputWithPoolingEarlyExit(  # TODO: note the pooling
+        return BaseModelOutputWithPoolingEarlyExit(
             last_hidden_state=sequence_output,
             pooler_output=pooled_output,
             hidden_states=encoder_outputs.hidden_states,
@@ -540,7 +540,6 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
                         else:
                             self.config.problem_type = "multi_label_classification"
 
-                    # print(self.config.problem_type, 'problem type') TODO: remove
                     if self.config.problem_type == "regression":
                         loss_fct = MSELoss()
                         if self.num_labels == 1:

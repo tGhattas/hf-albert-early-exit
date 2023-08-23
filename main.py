@@ -199,8 +199,8 @@ def run(minize_dataset: bool = False):
                     # To load a saved model
                     # model, tokenizer, eval_results = load_model_and_evaluate(save_directory, dataset, validation_set_name)
 
-                    buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_th}\\n' + str(
-                        eval_results) + '\\n']
+                    buffer += ['-' * 30 + f'{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_th}\n' + str(
+                        eval_results) + '\n']
                     print(buffer)
 
 
