@@ -98,7 +98,7 @@ def run(minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> d
     datasets_to_run = [dataset_to_run] if dataset_to_run is not None else model_names_to_hidden_layers_num.keys()
     # run on combinations
     for weight_name in ['equal', 'dyn']:
-        for dataset_name in model_names_to_hidden_layers_num:
+        for dataset_name in datasets_to_run:
             for model_name in model_names_to_hidden_layers_num[dataset_name]:
                 for hidden_layers in model_names_to_hidden_layers_num[dataset_name][model_name]:
                     for exit_th in exit_thesholds:
@@ -106,7 +106,7 @@ def run(minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> d
                         tokenizer = AlbertTokenizer.from_pretrained(model_name)
                         dataset, num_labels, validation_set_name = get_dataset(dataset_name)
 
-                        save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{dataset_name}_exit_th_{exit_thesholds}"
+                        save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{weight_name}_{dataset_name}_exit_th_{exit_th}"
 
                         thres_name = "bias_1" if exit_th > 0.0 else "entropy"
                         # define early exit config
