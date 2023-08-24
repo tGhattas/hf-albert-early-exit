@@ -103,7 +103,7 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
     datasets_to_run = [dataset_to_run] if dataset_to_run is not None else model_names_to_hidden_layers_num.keys()
     # run on combinations
     for weight_name in [
-        # 'equal',
+        'equal',
         'dyn'
     ]:
         for dataset_name in datasets_to_run:
