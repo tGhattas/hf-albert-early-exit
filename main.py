@@ -10,7 +10,8 @@ import numpy as np
 import json
 
 
-def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[str] = None) -> dict:
+def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[str] = None,
+        hidden_layers_multipliers: Optional[list] = None) -> dict:
     def get_number_of_hidden_layers(model: Union[str, AlbertForSequenceClassificationEarlyExit]) -> int:
         if isinstance(model, str):
             model = AlbertForSequenceClassification.from_pretrained(model)
@@ -73,7 +74,6 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
         model.save_pretrained(training_args.output_dir)
         tokenizer.save_pretrained(training_args.output_dir)
 
-
     def save_eval_results(results, model_dir):
         with open(f"{model_dir}/eval_results.json", 'w') as f:
             json.dump(results, f)
@@ -81,16 +81,20 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
     # ALBERT model name (can be "albert-base-v2", "albert-large-v2", "albert-xlarge-v2", "albert-xxlarge-v2")
 
     # Dataset name. Can be 'snli'/3, 'multi_nli'/3, 'sst2'.
+    hidden_layers_multipliers = [1, 1.5, 2] if hidden_layers_multipliers is None else hidden_layers_multipliers
     model_names_to_hidden_layers_num = {
         "sst2": {
             # batch size 128/256
-            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
+                               hidden_layers_multipliers],
         },
         "snli": {
-            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
+                               hidden_layers_multipliers],
         },
         "multi_nli": {
-            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in [1, 1.5, 2]],
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
+                               hidden_layers_multipliers],
         },
     }
     exit_thesholds = [0.6, 0.4, 0.2, 0.0]
@@ -99,7 +103,7 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
     datasets_to_run = [dataset_to_run] if dataset_to_run is not None else model_names_to_hidden_layers_num.keys()
     # run on combinations
     for weight_name in [
-        # 'equal',
+        'equal',
         'dyn'
     ]:
         for dataset_name in datasets_to_run:
@@ -167,7 +171,8 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
                         # To load a saved model
 
                         eval_results['exit_th'] = exit_th
-                        buffer[f'{hidden_layers}_{model_name}_{dataset_name}_W_{weight_name}_thn_{thres_name}_exit_th_{exit_th}'] = eval_results
+                        buffer[
+                            f'{hidden_layers}_{model_name}_{dataset_name}_W_{weight_name}_thn_{thres_name}_exit_th_{exit_th}'] = eval_results
                         pprint(buffer)
     return buffer
 
@@ -194,5 +199,5 @@ def fill_in_dataframes(data: dict[str, dict]) -> dict[str, pd.DataFrame]:
 
 if __name__ == '__main__':
     # minize dataset for quick end to end check
-    results = run(batch_size=32, minize_dataset=True)
+    results = run(batch_size=32, minize_dataset=True, hidden_layers_multipliers=[1], dataset_to_run='sst2')
     print(fill_in_dataframes(results)['sst2'])
