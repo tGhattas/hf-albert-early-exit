@@ -103,6 +103,8 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
     exit_thesholds = [0.6, 0.4, 0.2, 0.0]
     buffer = {}
 
+    fc_size_map = { "albert-base-v2": 768, "albert-large-v2": 1024, "albert-xlarge-v2": 2048, "albert-xxlarge-v2": 4096}
+
     datasets_to_run = [dataset_to_run] if dataset_to_run is not None else model_names_to_hidden_layers_num.keys()
     # run on combinations
     for weight_name in [
@@ -125,7 +127,7 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
                             "exit_layers_depth": 1,
                             "exit_thres": exit_th,
                             "use_out_pooler": True,
-                            "fc_size1": 768,
+                            "fc_size1": fc_size_map[model_name],
                             "pooler_input": "cls",
                             "w_init": 4.0,
                             "weight_name": weight_name,
