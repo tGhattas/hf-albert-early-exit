@@ -90,10 +90,10 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
                                 hidden_layers_multipliers],
         },
         "snli": {
-            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
-                               hidden_layers_multipliers],
-            # "albert-large-v2": [int(_ * get_number_of_hidden_layers("albert-large-v2")) for _ in
-            #                     hidden_layers_multipliers],
+            # "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
+            #                    hidden_layers_multipliers],
+            "albert-large-v2": [int(_ * get_number_of_hidden_layers("albert-large-v2")) for _ in
+                                hidden_layers_multipliers],
         },
         "multi_nli": {
             "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
@@ -106,7 +106,7 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
     datasets_to_run = [dataset_to_run] if dataset_to_run is not None else model_names_to_hidden_layers_num.keys()
     # run on combinations
     for weight_name in [
-        # 'equal',
+        'equal',
         'dyn'
     ]:
         for dataset_name in datasets_to_run:
