@@ -18,9 +18,9 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
         return model.config.num_hidden_layers
 
     def get_dataset(dataset_name):
-        if dataset_name.lower() not in ['snli', 'multi_nli', 'sst2', 'imdb']:
+        if dataset_name.lower() not in ['snli', 'multi_nli', 'sst2', 'imdb', 'squad']:
             raise ValueError(
-                f"Invalid dataset name. Expected 'snli', 'multi_nli', 'sst2', or 'imdb', but got {dataset_name}")
+                f"Invalid dataset name. Expected 'snli', 'multi_nli', 'sst2', 'squad', or 'imdb', but got {dataset_name}")
 
         dataset = load_dataset(dataset_name)
 
@@ -99,8 +99,13 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
             "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
                                hidden_layers_multipliers],
         },
+        "squad": {
+            "albert-base-v2": [int(_ * get_number_of_hidden_layers("albert-base-v2")) for _ in
+                               hidden_layers_multipliers],
+        },
     }
     exit_thesholds = [0.6, 0.4, 0.2, 0.0]
+    exit_thesholds = [0.0]
     buffer = {}
 
     fc_size_map = { "albert-base-v2": 768, "albert-large-v2": 1024, "albert-xlarge-v2": 2048, "albert-xxlarge-v2": 4096}
