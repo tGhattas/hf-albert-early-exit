@@ -173,7 +173,6 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
                         save_model(trainer.model, training_args)
 
                         # Evaluate the model
-                        trainer.model.set_eval_mode(True)
                         eval_results = trainer.evaluate()
 
                         # Save evaluation results

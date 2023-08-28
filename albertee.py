@@ -478,11 +478,6 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
         self.cnt_exit = [0] * self.data_num
         self.compute_ratio = 0
 
-    def set_eval_mode(self, is_eval_mode: bool):
-        """ inorder to change code of the original model as little as possible, I use this function to set eval
-        mode and run trainer.evaluate() """
-        self.config.is_eval_mode = is_eval_mode
-
     def forward(
             self,
             input_ids: Optional[torch.LongTensor] = None,
@@ -495,7 +490,6 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
-            is_eval_mode: bool = False,
     ) -> Union[SequenceClassifierOutput, Tuple]:
         """ early exit implementation """
         r"""
@@ -504,8 +498,9 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
                     config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
                     `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
                 """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        is_eval_mode = self.config.is_eval_mode or is_eval_mode
+        self.config.is_eval_mode = not self.training
         outputs = self.albert(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -516,12 +511,12 @@ class AlbertForSequenceClassificationEarlyExit(AlbertPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-            is_eval_mode=is_eval_mode
+            is_eval_mode=self.config.is_eval_mode
         )
 
         loss = None
         result = None
-        if not is_eval_mode:
+        if self.training:
 
             if self.config.weight_name == "dyn":
                 self.exit_weight_lst = self.sigmoid(self.W)
