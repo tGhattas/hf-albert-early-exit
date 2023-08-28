@@ -125,7 +125,9 @@ def run(batch_size: int, minize_dataset: bool = False, dataset_to_run: Optional[
 
                         save_directory = f"outputs/ALBERT_{hidden_layers}_{model_name}_{weight_name}_{dataset_name}_exit_th_{exit_th}"
 
-                        thres_name = "entropy"  # "bias_1" if exit_th > 0.0 else "entropy"
+                        # thres_name is one of ELBERT defined ["bias_1", "bias_2", "bias_3" "entropy", "logits"]
+                        thres_name = "entropy"
+
                         # define early exit config
                         early_exit_config = {
                             "exit_layers_depth": 1,
